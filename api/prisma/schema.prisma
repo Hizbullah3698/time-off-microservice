@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum TimeOffStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  COMPLETED
+  SYNC_FAILED_MANUAL
+}
+
+enum SyncType {
+  BATCH
+  REALTIME
+  WEBHOOK
+}
+
+model TimeOffRequest {
+  id              String        @id @default(uuid())
+  employeeId      String
+  locationId      String
+  startDate       String
+  endDate         String
+  daysRequested   Int
+  status          TimeOffStatus @default(PENDING)
+  idempotencyKey  String        @unique
+  hcmSynced       Boolean       @default(false)
+  syncError       Boolean       @default(false)
+  retryCount      Int           @default(0)
+  lastRetryAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model BalanceCache {
+  id                String    @id @default(uuid())
+  employeeId        String
+  locationId        String
+  totalBalance      Float     @default(0)
+  pendingDeductions Float     @default(0)
+  version           Int       @default(1)
+  lastSyncedAt      DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([employeeId, locationId])
+}
+
+model SyncLog {
+  id              String    @id @default(uuid())
+  type            SyncType
+  employeeId      String?
+  locationId      String?
+  previousBalance Float?
+  newBalance      Float?
+  eventId         String?   @unique
+  createdAt       DateTime  @default(now())
+}
